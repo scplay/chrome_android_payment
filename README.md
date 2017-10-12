@@ -13,6 +13,7 @@ You must use Chrome M61 or later on Android for devices running Google Play Serv
 [中文文档:将 Android Pay 集成到支付请求中](https://developers.google.com/web/fundamentals/payments/android-pay)
 
 [注册android pay商户](https://support.google.com/androidpay/merchant/contact/android_pay?hl=en)
-[国际快递公司整合API服务](https://goshippo.com/)
-[如何注册stripe:必须有美国公司与SSN](https://www.zhihu.com/question/39955450)
+
+[国际快递公司整合API服务](https://goshippo.com/)   
+[如何注册stripe:必须有美国公司与SSN](https://www.zhihu.com/question/39955450)  
 
