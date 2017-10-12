@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+	<meta charset="UTF-8">
+	<title>chrome web payment</title>
+</head>
+<body>
+	<h1>测试中...</h1>
+	<button id='btn-pay' onclick='initPay()'>点我支付</button>
+	<!-- 引入 google payment shim -->
+
+
+<!-- <script src="https://storage.googleapis.com/prshim/v1/payment-shim.js"></script>	 -->
+<script>
+	// 需要使用的支付信用卡标准 | 目前，PaymentRequest 在 Chrome 中仅支持以下标准信用卡：“amex”、“diners”、“discover”、“jcb”、“maestro”、“mastercard”、“unionpay”和“visa”。
+	// var methodData = [
+	//   {
+	//     supportedMethods: ["visa", "mastercard"]
+	//   }
+	// ];
+	var methodData = [
+	  {
+	    supportedMethods: ["visa", "mastercard","unionpay"]
+	  },
+	  {
+	    supportedMethods: ['https://android.com/pay'],
+	    data: {
+	      //merchant ID obtained from Google that maps to your origin
+	      merchantId: '02510116604241796260',
+	      environment: 'TEST',
+	      allowedCardNetworks: ['AMEX', 'MASTERCARD', 'VISA', 'DISCOVER'],
+	      paymentMethodTokenizationParameters: {
+	        tokenizationType: 'NETWORK_TOKEN',
+	        parameters: {
+	          //public key to encrypt response from Android Pay
+	          'publicKey': 'BC9u7amr4kFD8qsdxnEfWV7RPDR9v4gLLkx3jfyaGOvxBoEuLZKE0Tt5O/2jMMxJ9axHpAZD2Jhi4E74nqxr944='
+	        }
+	      }
+	    }
+	  }
+	];
+
+	// 有关交易的信息
+	var details = {
+	  displayItems: [ // 显示支付信息的条目
+	    {
+	      label: "产品的相关信息",
+	      amount: { currency: "USD", value : "0.02" }, // 币种 与 金额
+	    },
+	    {
+	      label: "有关折扣信息",
+	      amount: { currency: "USD", value : "-00.01" }, // 币种 与 优惠额度
+	      pending: true // 常用于显示运费或税额等取决于收货地址或收货选项的项目
+	    }
+	  ],
+	  total:  { // 总价
+	    label: "总计",
+	    amount: { currency: "USD", value : "0.01" }, // 
+	  }
+	};
+
+	// 如果需要出售的是实体物品
+	var options = {
+	  requestShipping: true, // 需要用户填写收货地址， chrome 会自动处理并保存这些用户信息，以供下次调用
+	  shippingType: "shipping" // "shipping"(default), "delivery" or "pickup"
+	};
+
+	// 构建payment 对象
+	var request = new PaymentRequest(
+	  methodData, // 支付方式和数据
+	  details,    // 有关交易的信息
+	  options     // 是否显示收货地址等 etc 
+	);
+
+	// 显示支付界面
+	function initPay(){
+		request.show().then(function(paymentResponse) {
+			var paymentData = {
+			    // payment method string, e.g. “visa”
+			    method: paymentResponse.methodName,
+			    // payment details as you requested
+			    details: paymentResponse.details
+			  };
+
+			  // 支付成功回调
+			  paymentResponse.complete("success");
+
+			  // 支付失败回调
+			  // paymentResponse.complete("fail");
+
+		}).catch(function(err) {
+		  console.error("支付请求有问题！", err.message);
+		});
+		
+	}
+
+	// 20 分钟超时 不支付则取消支付
+	var paymentTimeout = window.setTimeout(function() {
+	  window.clearTimeout(paymentTimeout);
+	  request.abort().then(function() {
+	    console.log('支付超时20分钟，不能再支付了');
+	  }).catch(function() {
+	    console.log('无法取消');
+	  });
+	}, 20 * 60 * 1000);  /* 20 minutes */
+
+	// 监听地址变动并重新计算运费
+	function listenReCalcShippingCharge(request) {
+		request.addEventListener('shippingaddresschange', e => {
+		  e.updateWith(((details, addr) => {
+		    if (addr.country === 'US') {
+		      var shippingOption = {
+		        id: '',
+		        label: '',
+		        amount: {currency: 'USD', value: '0.00'},
+		        selected: true
+		      };
+		      if (addr.region === 'US') {
+		        shippingOption.id = 'us';
+		        shippingOption.label = 'Standard shipping in US';
+		        shippingOption.amount.value = '0.00';
+		        details.total.amount.value = '55.00';
+		      } else {
+		        shippingOption.id = 'others';
+		        shippingOption.label = 'International shipping';
+		        shippingOption.amount.value = '10.00';
+		        details.total.amount.value = '65.00';
+		      }
+		      if (details.displayItems.length === 2) {
+		        details.displayItems.splice(1, 0, shippingOption);
+		      } else {
+		        details.displayItems.splice(1, 1, shippingOption);
+		      }
+		      details.shippingOptions = [shippingOption];
+		    } else {
+		      details.shippingOptions = [];
+		    }
+		    return Promise.resolve(details);
+		  })(details, request.shippingAddress));
+		});
+	}
+</script>
+</body>
+</html>
